@@ -4,7 +4,10 @@ from pydantic import BaseModel,Field,computed_field,field_validator
 from typing import List,Annotated, Literal
 import pickle
 import pandas as pd
+from model.predict import predict_output
 from schema.user_input import UserInput
+from model.predict import predict_output,model,MODEL_VERSION
+from schema.prediction_response import PredictionResponse
 
 
 #importing the ml model 
@@ -30,21 +33,25 @@ def health_check():
             'model_loaded': 'True'}
 
 
-@app.post('/predict')
+@app.post('/predict', response_model = PredictionResponse)
 def predict_premium(data: UserInput):
 
-    input_df = pd.DataFrame([{
+    user_input ={
         'bmi': data.bmi,
         'age_group': data.age_group,
         'lifestyle_risk': data.lifestyle_risk,
         'city_tier': data.city_tier,
         'income_lpa': data.income_lpa,
         'occupation': data.occupation
-    }])
+    }
 
-    prediction = model.predict(input_df)[0]
+    try:
 
+      prediction = predict_output(user_input)
 
-    
-    return JSONResponse(status_code=200, content={'predicted_category': prediction})
+      return JSONResponse(status_code=200, content={'response': prediction})
+
+    except Exception as e:
+
+      return JSONResponse(status_code=500, content={'error': str(e)})
 
